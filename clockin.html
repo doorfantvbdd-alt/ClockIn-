@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ClockIn</title>
+<style>
+  :root{
+    --bg:#000000;
+    --card:#1c1c1e;
+    --card2:#161618;
+    --card-elevated:#232326;
+    --blue:#3d8bff;
+    --blue-glow: rgba(61,139,255,0.55);
+    --job-bg:#3a1414;
+    --job-text:#ff7a63;
+    --green:#34c759;
+    --orange:#ff9f0a;
+    --text-1:#ffffff;
+    --text-2:#9a9aa0;
+    --text-3:#6c6c70;
+    --divider:#2c2c2e;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    color:var(--text-1);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior:none;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100dvh;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+  .page{
+    flex:1;
+    display:none;
+    padding:22px 20px 100px 20px;
+    animation:fadeIn .18s ease;
+  }
+  .page.active{display:block;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  h1.title{font-size:34px; font-weight:800; margin:6px 0 18px 0; letter-spacing:-0.5px;}
+
+  /* ---------- DASHBOARD ---------- */
+  .dash{display:flex; flex-direction:column; align-items:center; padding-top:38px;}
+  .dash-status{color:var(--text-1); font-size:17px; font-weight:600; margin-bottom:18px;}
+  .dash-amount{
+    font-size:64px; font-weight:800; color:var(--blue);
+    text-shadow:0 0 26px var(--blue-glow);
+    letter-spacing:-1px;
+    margin-bottom:6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-timer{
+    font-size:26px; color:var(--text-2); font-weight:500;
+    font-variant-numeric: tabular-nums;
+    margin-bottom:22px;
+  }
+  .job-pill{
+    display:flex; align-items:center; gap:8px;
+    background:var(--job-bg); color:var(--job-text);
+    padding:9px 16px; border-radius:20px;
+    font-size:15px; font-weight:600;
+    border:none; cursor:pointer;
+    margin-bottom:14px;
+  }
+  .job-pill .pencil{opacity:.8; font-size:13px;}
+  .wage-pill{
+    background:none; border:none; color:var(--text-2);
+    font-size:14px; display:flex; align-items:center; gap:6px;
+    cursor:pointer; margin-bottom:50px;
+  }
+  .wage-pill .check{
+    width:16px;height:16px;border-radius:50%;background:#3a3a3c;
+    display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-2);
+  }
+  .clock-btn{
+    width:100%;
+    padding:19px 0;
+    border-radius:30px;
+    border:none;
+    font-size:19px;
+    font-weight:700;
+    color:#fff;
+    background:var(--blue);
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    cursor:pointer;
+    box-shadow:0 4px 24px rgba(61,139,255,0.35);
+    transition:background .15s ease, transform .1s ease;
+  }
+  .clock-btn:active{transform:scale(0.98);}
+  .clock-btn.active-state{background:#ff453a; box-shadow:0 4px 24px rgba(255,69,58,0.35);}
+  .clock-btn svg{flex-shrink:0;}
+
+  /* ---------- HISTORY ---------- */
+  .history-top{display:flex; justify-content:flex-end; gap:10px; margin-bottom:8px;}
+  .icon-btn{
+    width:38px; height:38px; border-radius:19px; background:var(--card);
+    display:flex; align-items:center; justify-content:center; border:none; color:var(--text-1);
+    font-size:18px; cursor:pointer;
+  }
+  .search-bar{
+    background:var(--card); border-radius:14px; padding:12px 16px;
+    color:var(--text-2); font-size:15px; margin:14px 0 16px 0;
+    display:flex; align-items:center; gap:8px;
+  }
+  .search-bar input{
+    background:none; border:none; outline:none; color:var(--text-1); font-size:15px; width:100%;
+    font-family:inherit;
+  }
+  .search-bar input::placeholder{color:var(--text-2);}
+  .summary-card{
+    background:var(--card); border-radius:16px; padding:18px 18px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:22px;
+  }
+  .summary-card .label{color:var(--text-2); font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;}
+  .summary-card .big{color:var(--blue); font-size:28px; font-weight:800; margin-top:4px;}
+  .summary-card .right{text-align:right; color:var(--text-2); font-size:13px; line-height:1.6;}
+  .day-group{margin-bottom:18px;}
+  .day-head{display:flex; justify-content:space-between; color:var(--text-2); font-size:12px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:8px; padding:0 2px;}
+  .shift-row{
+    background:var(--card); border-radius:14px; padding:13px 14px;
+    display:flex; align-items:center; gap:12px; margin-bottom:8px; cursor:pointer;
+  }
+  .shift-bar{width:4px; align-self:stretch; border-radius:3px; background:#ff5b45;}
+  .shift-info{flex:1; min-width:0;}
+  .shift-name{font-size:15px; font-weight:700; display:flex; align-items:center; gap:6px;}
+  .shift-time{font-size:13px; color:var(--text-2); margin-top:2px;}
+  .shift-amount{font-size:16px; font-weight:700; color:var(--text-1); white-space:nowrap;}
+  .empty-note{color:var(--text-3); font-size:14px; text-align:center; margin-top:40px;}
+
+  /* ---------- INSIGHTS ---------- */
+  .seg-row{display:flex; background:var(--card); border-radius:14px; padding:4px; margin-bottom:14px; gap:4px;}
+  .seg-btn{
+    flex:1; text-align:center; padding:10px 0; border-radius:11px; border:none; background:none;
+    color:var(--text-2); font-size:13px; font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .seg-btn.on{background:#123a63; color:var(--blue);}
+  .period-row{display:flex; background:var(--card2); border-radius:12px; padding:3px; margin-bottom:18px;}
+  .period-btn{flex:1; text-align:center; padding:8px 0; border-radius:9px; border:none; background:none; color:var(--text-2); font-size:13px; font-weight:600; cursor:pointer;}
+  .period-btn.on{background:#3a3a3d; color:var(--text-1);}
+  .chart-card{background:var(--card); border-radius:18px; padding:18px 16px 16px 16px; margin-bottom:18px;}
+  .chart-title{color:var(--text-2); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;}
+  .chart-total{color:var(--text-1); font-size:15px; font-weight:700; margin-top:2px; margin-bottom:14px;}
+  .bars{display:flex; align-items:flex-end; gap:4px; height:150px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .bar{width:100%; max-width:22px; background:var(--blue); border-radius:4px 4px 2px 2px; min-height:3px;}
+  .bar-label{color:var(--text-3); font-size:9px; margin-top:6px;}
+  .cumulative{font-size:22px; font-weight:800; color:var(--blue);}
+
+  /* ---------- GOALS ---------- */
+  .goal-summary{background:var(--card); border-radius:18px; padding:20px; margin-bottom:22px;}
+  .goal-summary .label{color:var(--text-2); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;}
+  .goal-summary .amount{color:var(--blue); font-size:30px; font-weight:800; margin:4px 0 12px 0;}
+  .progress-track{background:#2c2c2e; height:8px; border-radius:5px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--blue); border-radius:5px; transition:width .3s ease;}
+  .progress-fill.green{background:var(--green);}
+  .goal-meta{display:flex; justify-content:space-between; color:var(--text-2); font-size:13px; margin-top:8px;}
+  .goal-card{background:var(--card); border-radius:16px; padding:16px; display:flex; gap:14px; align-items:center; margin-bottom:14px; cursor:pointer;}
+  .goal-ring{width:38px; height:38px; border-radius:50%; background:#0f2a14; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .goal-body{flex:1;}
+  .goal-top-row{display:flex; justify-content:space-between; align-items:baseline;}
+  .goal-name{font-size:15px; font-weight:700;}
+  .goal-date{color:var(--text-2); font-size:12px;}
+  .goal-nums{display:flex; justify-content:space-between; margin-top:2px; margin-bottom:8px;}
+  .goal-nums .left{color:var(--text-1); font-size:14px; font-weight:600;}
+  .goal-nums .pct{color:var(--text-2); font-size:14px;}
+  .goal-save-note{color:var(--orange); font-size:12px; margin-top:8px;}
+  .pro-row{background:var(--card); border-radius:16px; padding:16px; display:flex; gap:14px; align-items:center; cursor:pointer;}
+  .pro-icon{width:38px;height:38px;border-radius:50%;background:#122a4a;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .pro-title{font-size:15px; font-weight:700;}
+  .pro-sub{font-size:13px; color:var(--text-2); margin-top:2px;}
+  .chev{color:var(--text-3); font-size:18px; margin-left:auto;}
+
+  /* ---------- SETTINGS ---------- */
+  .upgrade-banner{
+    background:linear-gradient(135deg,#3d8bff,#5f6cff);
+    border-radius:18px; padding:18px; display:flex; align-items:center; gap:14px;
+    margin-bottom:20px; cursor:pointer;
+  }
+  .upgrade-icon{font-size:26px;}
+  .upgrade-title{font-weight:800; font-size:16px;}
+  .upgrade-sub{font-size:13px; opacity:.9; margin-top:2px;}
+  .settings-row{background:var(--card); border-radius:16px; margin-bottom:10px; overflow:hidden;}
+  .settings-head{display:flex; align-items:center; gap:14px; padding:15px 16px; cursor:pointer;}
+  .settings-icon{width:32px;height:32px;border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;}
+  .settings-titles{flex:1;}
+  .settings-title{font-size:15px; font-weight:700;}
+  .settings-sub{font-size:12.5px; color:var(--text-2); margin-top:1px;}
+  .settings-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .settings-body.open{max-height:400px;}
+  .settings-body-inner{padding:0 16px 16px 16px; border-top:1px solid var(--divider);}
+  .setting-line{display:flex; justify-content:space-between; align-items:center; padding:12px 0;}
+  .setting-line:not(:last-child){border-bottom:1px solid var(--divider);}
+  .setting-line-label{font-size:14px; color:var(--text-1);}
+  .toggle{width:44px; height:26px; border-radius:14px; background:#3a3a3c; position:relative; cursor:pointer; transition:background .15s;}
+  .toggle.on{background:var(--green);}
+  .toggle-knob{width:22px; height:22px; border-radius:50%; background:#fff; position:absolute; top:2px; left:2px; transition:left .15s;}
+  .toggle.on .toggle-knob{left:20px;}
+  .wage-input-row{display:flex; align-items:center; gap:8px; padding:12px 0;}
+  .wage-input-row input{
+    flex:1; background:var(--card2); border:1px solid var(--divider); border-radius:10px;
+    padding:9px 10px; color:var(--text-1); font-size:15px; font-family:inherit; outline:none;
+  }
+  .small-save{background:var(--blue); color:#fff; border:none; border-radius:9px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .faq-item{font-size:13.5px; color:var(--text-2); padding:10px 0; border-bottom:1px solid var(--divider); line-height:1.5;}
+  .faq-item:last-child{border-bottom:none;}
+  .faq-item b{color:var(--text-1);}
+
+  /* ---------- NAV ---------- */
+  .navbar{
+    position:sticky; bottom:0; left:0; right:0;
+    background:rgba(28,28,30,0.92);
+    backdrop-filter:blur(20px);
+    display:flex;
+    border-radius:26px;
+    margin:0 12px 14px 12px;
+    padding:8px 4px;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:6px 0; border-radius:18px; cursor:pointer; color:var(--text-2);
+    font-size:10.5px; font-weight:600; border:none; background:none;
+  }
+  .nav-item.on{color:var(--blue); background:rgba(61,139,255,0.12);}
+  .nav-item svg{width:22px; height:22px;}
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    display:none; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-sheet{
+    background:#1c1c1e; width:100%; max-width:480px; border-radius:24px 24px 0 0;
+    padding:22px 20px 30px 20px; animation:slideUp .2s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
+  .modal-title{font-size:18px; font-weight:800; margin-bottom:16px;}
+  .modal-field label{font-size:12px; color:var(--text-2); font-weight:600; text-transform:uppercase; letter-spacing:.4px;}
+  .modal-field input{
+    width:100%; background:var(--card2); border:1px solid var(--divider); border-radius:12px;
+    padding:12px 14px; color:var(--text-1); font-size:16px; margin-top:6px; margin-bottom:14px;
+    font-family:inherit; outline:none;
+  }
+  .modal-btns{display:flex; gap:10px; margin-top:6px;}
+  .modal-btn{flex:1; padding:14px 0; border-radius:14px; border:none; font-size:15px; font-weight:700; cursor:pointer;}
+  .modal-btn.cancel{background:#2c2c2e; color:var(--text-1);}
+  .modal-btn.save{background:var(--blue); color:#fff;}
+  .modal-sheet{max-height:88vh; overflow-y:auto;}
+  .modal-sheet.big{padding-top:16px;}
+  .sheet-topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .sheet-link{background:none; border:none; color:var(--blue); font-size:16px; font-weight:600; cursor:pointer; padding:6px 4px;}
+  .sheet-link.disabled{color:var(--text-3); cursor:default;}
+  .sheet-link.destructive{color:#ff453a;}
+  .section-label{color:var(--text-2); font-size:13px; font-weight:600; margin:18px 0 8px 2px; text-transform:capitalize;}
+  .section-label:first-of-type{margin-top:4px;}
+  .field-group{background:var(--card2); border-radius:14px; overflow:hidden;}
+  .field-row{display:flex; align-items:center; justify-content:space-between; padding:13px 14px; gap:10px;}
+  .field-row:not(:last-child){border-bottom:1px solid var(--divider);}
+  .field-row .flabel{font-size:15px; color:var(--text-1); flex-shrink:0;}
+  .field-row input[type=text], .field-row input[type=number]{
+    flex:1; background:none; border:none; outline:none; color:var(--text-1); font-size:15px;
+    text-align:right; font-family:inherit; min-width:0;
+  }
+  .field-row input[type=date], .field-row input[type=time]{
+    background:none; border:none; outline:none; color:var(--blue); font-size:15px; font-family:inherit;
+  }
+  .field-row select{
+    background:none; border:none; outline:none; color:var(--blue); font-size:15px; font-family:inherit;
+    text-align:right; direction:rtl;
+  }
+  .field-row select option{ background:#1c1c1e; color:var(--text-1); direction:ltr; }
+  .field-note{color:var(--text-3); font-size:12.5px; padding:8px 2px 4px 2px; line-height:1.5;}
+  .swatch-row{display:flex; flex-wrap:wrap; gap:10px; background:var(--card2); border-radius:14px; padding:14px;}
+  .swatch{
+    width:34px; height:34px; border-radius:50%; border:2.5px solid transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .swatch.selected{border-color:#fff; box-shadow:0 0 0 1px #000;}
+  .icon-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; background:var(--card2); border-radius:14px; padding:14px;}
+  .icon-opt{
+    aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:17px; cursor:pointer; border:2px solid transparent; background:#2c2c2e;
+  }
+  .icon-opt.selected{border-color:currentColor;}
+  .range-card{background:var(--card2); border-radius:14px; padding:16px;}
+  .range-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
+  .range-pct{font-size:22px; font-weight:800; color:var(--text-1);}
+  .range-amt{font-size:16px; font-weight:700;}
+  .range-slider{width:100%; -webkit-appearance:none; appearance:none; height:6px; border-radius:4px; background:#3a3a3c; outline:none; margin:8px 0;}
+  .range-slider::-webkit-slider-thumb{-webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:#fff; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.4);}
+  .range-slider::-moz-range-thumb{width:24px; height:24px; border-radius:50%; background:#fff; border:none; cursor:pointer;}
+  .range-scale{display:flex; justify-content:space-between; color:var(--text-3); font-size:11px; margin-bottom:6px;}
+  .break-btn{
+    width:100%; padding:14px 0; border-radius:20px; border:none; font-size:15px; font-weight:700;
+    color:var(--orange); background:rgba(255,159,10,0.14); cursor:pointer; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .break-btn.on-break{color:#fff; background:var(--orange);}
+  .schedule-row{background:var(--card); border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+  .schedule-info{flex:1; min-width:0;}
+  .schedule-name{font-size:15px; font-weight:700;}
+  .schedule-time{font-size:13px; color:var(--text-2); margin-top:2px;}
+  .schedule-apply{background:var(--blue); color:#fff; border:none; border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:700; cursor:pointer; flex-shrink:0;}
+  .day-toggle-row{display:flex; gap:6px; margin:6px 0 14px 0;}
+  .day-toggle{
+    flex:1; text-align:center; padding:9px 0; border-radius:9px; background:#2c2c2e; color:var(--text-2);
+    font-size:12px; font-weight:700; cursor:pointer; border:2px solid transparent;
+  }
+  .day-toggle.on{background:rgba(61,139,255,0.18); color:var(--blue); border-color:var(--blue);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="dash">
+      <div class="dash-status" id="dashStatus">Not Clocked In</div>
+      <div class="dash-amount" id="dashAmount">$0.00</div>
+      <div class="dash-timer" id="dashTimer">00:00:00</div>
+      <button class="job-pill" id="jobPill" onclick="openJobModal()">
+        <span id="jobIcon">🍴</span><span id="jobLabel">McDonald's</span><span id="jobEmoji">😔</span><span class="pencil">✏️</span>
+      </button>
+      <button class="wage-pill" onclick="openWageModal()">
+        <span id="wageLabel">$19.00/hr</span><span class="check">✓</span>
+      </button>
+      <button class="break-btn" id="breakBtn" style="display:none;" onclick="toggleBreak()">
+        <span id="breakBtnIcon">☕</span><span id="breakBtnLabel">Start Break</span>
+      </button>
+      <button class="clock-btn" id="clockBtn" onclick="toggleClock()">
+        <svg id="clockIcon" width="20" height="20" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="11" fill="white" opacity="0"/><path d="M8 5v14l11-7z"/></svg>
+        <span id="clockBtnLabel">Clock In</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="history-top">
+      <button class="icon-btn" onclick="addManualShift()">+</button>
+      <button class="icon-btn" onclick="alert('Sort and export options coming soon.')">⋯</button>
+    </div>
+    <h1 class="title">History</h1>
+    <div class="search-bar">
+      <span>🔍</span>
+      <input id="searchInput" placeholder="Search by job or notes" oninput="renderHistory()">
+    </div>
+    <div class="summary-card">
+      <div>
+        <div class="label">All Time</div>
+        <div class="big" id="allTimeTotal">$0.00</div>
+      </div>
+      <div class="right">
+        <div id="allTimeShifts">0 shifts</div>
+        <div id="allTimeHours">0 hrs</div>
+      </div>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="page" id="page-insights">
+    <h1 class="title">Insights</h1>
+    <div class="seg-row">
+      <button class="seg-btn on" data-metric="wage" onclick="setMetric('wage')">$<br>Wage</button>
+      <button class="seg-btn" data-metric="tips" onclick="setMetric('tips')">🧾<br>Tips</button>
+      <button class="seg-btn" data-metric="tax" onclick="setMetric('tax')">%<br>Tax</button>
+      <button class="seg-btn" data-metric="breaks" onclick="setMetric('breaks')">☕<br>Breaks</button>
+    </div>
+    <div class="period-row">
+      <button class="period-btn" data-period="7" onclick="setPeriod(7)">7D</button>
+      <button class="period-btn on" data-period="30" onclick="setPeriod(30)">30D</button>
+      <button class="period-btn" data-period="90" onclick="setPeriod(90)">90D</button>
+      <button class="period-btn" data-period="365" onclick="setPeriod(365)">1Y</button>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" id="periodLabel">Last 30 days</div>
+      <div class="chart-total" id="periodTotal">$0.00 over 30 days</div>
+      <div class="bars" id="dailyBars"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Average by weekday</div>
+      <div class="chart-total">Highlights your strongest day</div>
+      <div class="bars" id="weekdayBars"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Cumulative earnings</div>
+      <div class="cumulative" id="cumulativeTotal">$0.00</div>
+    </div>
+  </div>
+
+  <!-- GOALS -->
+  <div class="page" id="page-goals">
+    <div class="history-top">
+      <button class="icon-btn" onclick="openGoalModal()">+</button>
+    </div>
+    <h1 class="title">Goals</h1>
+    <div class="goal-summary">
+      <div class="label">Saved Toward Goals</div>
+      <div class="amount" id="goalSavedTotal">$0.00</div>
+      <div class="progress-track"><div class="progress-fill" id="goalTopProgress" style="width:0%"></div></div>
+      <div class="goal-meta">
+        <span id="goalTopPct">0% of target</span>
+        <span id="goalTopTarget">$1,000 goal</span>
+      </div>
+    </div>
+    <div style="font-size:15px; font-weight:700; margin-bottom:10px;">Goals</div>
+    <div id="goalsList"></div>
+    <div class="pro-row" onclick="openGoalModal()">
+      <div class="pro-icon" style="background:#123a63;">➕</div>
+      <div style="flex:1;">
+        <div class="pro-title">Add another goal</div>
+        <div class="pro-sub">Save toward as many goals as you like, at the same time.</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <h1 class="title">Settings</h1>
+    <div class="upgrade-banner" style="cursor:default;">
+      <div class="upgrade-icon">✨</div>
+      <div>
+        <div class="upgrade-title">ClockIn Pro — Unlocked</div>
+        <div class="upgrade-sub">Every feature is available, all the time</div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('income')">
+        <div class="settings-icon" style="background:#12321a;">💲</div>
+        <div class="settings-titles">
+          <div class="settings-title">Income &amp; Pay</div>
+          <div class="settings-sub">Pay rates, taxes, tips and currency</div>
+        </div>
+        <div class="chev">⌄</div>
+      </div>
+      <div class="settings-body" id="body-income">
+        <div class="settings-body-inner">
+          <div class="wage-input-row">
+            <input id="settingsWageInput" type="number" step="0.01" placeholder="Hourly wage">
+            <button class="small-save" onclick="saveWageFromSettings()">Save</button>
+          </div>
+          <div class="wage-input-row">
+            <input id="settingsTaxInput" type="number" step="0.1" placeholder="Estimated tax rate %">
+            <button class="small-save" onclick="saveTaxFromSettings()">Save</button>
+          </div>
+          <div class="setting-line"><span class="setting-line-label">Current tax rate</span><span style="color:var(--text-2); font-size:14px;" id="currentTaxLabel">22%</span></div>
+          <div class="setting-line"><span class="setting-line-label">Currency</span><span style="color:var(--text-2); font-size:14px;">USD ($)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('time')">
+        <div class="settings-icon" style="background:#0e2340;">⏱️</div>
+        <div class="settings-titles">
+          <div class="settings-title">Time Tracking</div>
+          <div class="settings-sub">Breaks and Automatic clocking</div>
+        </div>
+        <div class="chev">⌄</div>
+      </div>
+      <div class="settings-body" id="body-time">
+        <div class="settings-body-inner">
+          <div class="setting-line">
+            <span class="setting-line-label">Automatic break deduction</span>
+            <div class="toggle" id="toggle-break" onclick="toggleSwitch('toggle-break')"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="setting-line">
+            <span class="setting-line-label">Reminder to clock out</span>
+            <div class="toggle" id="toggle-reminder" onclick="toggleSwitch('toggle-reminder')"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('prefs')">
+        <div class="settings-icon" style="background:#0e2340;">⚙️</div>
+        <div class="settings-titles">
+          <div class="settings-title">Preferences</div>
+          <div class="settings-sub">Customize ClockIn</div>
+        </div>
+        <div class="chev">⌄</div>
+      </div>
+      <div class="settings-body" id="body-prefs">
+        <div class="settings-body-inner">
+          <div class="setting-line">
+            <span class="setting-line-label">Haptic feedback</span>
+            <div class="toggle on" id="toggle-haptics" onclick="toggleSwitch('toggle-haptics')"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="setting-line">
+            <span class="setting-line-label">Live Activity on lock screen</span>
+            <div class="toggle on" id="toggle-live" onclick="toggleSwitch('toggle-live')"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('privacy')">
+        <div class="settings-icon" style="background:#3a1233;">✋</div>
+        <div class="settings-titles">
+          <div class="settings-title">Privacy &amp; Analytics</div>
+          <div class="settings-sub">Your data stays on this device</div>
+        </div>
+        <div class="chev">⌄</div>
+      </div>
+      <div class="settings-body" id="body-privacy">
+        <div class="settings-body-inner">
+          <div class="faq-item">All shift and wage data is stored only in this browser session. Nothing is sent to a server.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('faq')">
+        <div class="settings-icon" style="background:#101a3a;">❓</div>
+        <div class="settings-titles">
+          <div class="settings-title">Frequently Asked Questions</div>
+          <div class="settings-sub">Overtime, Watch, widgets and more</div>
+        </div>
+        <div class="chev">›</div>
+      </div>
+      <div class="settings-body" id="body-faq">
+        <div class="settings-body-inner">
+          <div class="faq-item"><b>How is overtime calculated?</b> ClockIn currently pays every hour at your set rate. Overtime multipliers are on the roadmap.</div>
+          <div class="faq-item"><b>Does it work in the background?</b> Yes — leave the tab open and the timer keeps counting even if you switch apps.</div>
+          <div class="faq-item"><b>Can I edit a past shift?</b> Tap any shift in History to view its details.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-head" onclick="toggleSetting('support')">
+        <div class="settings-icon" style="background:#3a1233;">🛟</div>
+        <div class="settings-titles">
+          <div class="settings-title">Support &amp; Info</div>
+          <div class="settings-sub">Request Features/Report Bugs</div>
+        </div>
+        <div class="chev">⌄</div>
+      </div>
+      <div class="settings-body" id="body-support">
+        <div class="settings-body-inner">
+          <div class="faq-item">This is a demo build of ClockIn. Feature requests and bug reports aren't wired up yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV BAR -->
+  <div class="navbar">
+    <button class="nav-item on" data-page="dashboard" onclick="goTo('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" data-page="history" onclick="goTo('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      History
+    </button>
+    <button class="nav-item" data-page="insights" onclick="goTo('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.6.5 1.1v.5h6v-.5c0-.5.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg>
+      Insights
+    </button>
+    <button class="nav-item" data-page="goals" onclick="goTo('goals')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      Goals
+    </button>
+    <button class="nav-item" data-page="settings" onclick="goTo('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9c.2.6.7 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet" id="modalSheet"></div>
+</div>
+
+<script>
+/* ---------------- STATE ---------------- */
+const COLORS = ['#3d8bff','#34c759','#ff9f0a','#ff2d55','#af52de','#5ac8fa','#ff3b30','#ffd60a','#5856d6','#30d5c8'];
+const ICONS = ['💼','💻','🍴','🔨','🩺','🎓','💅','🚗','🛒','🌿','🎵','🛠️','✂️','🏪','📖','📷'];
+const CURRENCIES = {
+  USD: { symbol:'$', label:'US Dollar (USD)' },
+  AUD: { symbol:'$', label:'Australian Dollar (AUD)' },
+  CAD: { symbol:'$', label:'Canadian Dollar (CAD)' },
+  NZD: { symbol:'$', label:'New Zealand Dollar (NZD)' },
+  GBP: { symbol:'£', label:'British Pound (GBP)' },
+  EUR: { symbol:'€', label:'Euro (EUR)' }
+};
+
+const state = {
+  wage: 19.00,
+  taxRate: 22,
+  currency: 'USD',
+  receiveTips: true,
+  job: { name: "McDonald's", mood: "😔", icon: "🍴", color: "#ff3b30", overtime: false },
+  clockedIn: false,
+  clockInTime: null,
+  onBreak: false,
+  breakStart: null,
+  breakAccumMs: 0,
+  goals: [],
+  nextGoalId: 1,
+  metric: 'wage',
+  period: 30,
+  history: [],
+  settings: {
+    showBreakOption: true,
+    startBreakTimerEnabled: false,
+    defaultBreakMinutes: 15,
+    remindClockOut: false,
+    autoClockEnabled: false,
+    autoClockMode: 'Automatic',
+    workRadius: 25,
+    haptics: true,
+    liveActivity: true
+  },
+  schedules: [],
+  nextScheduleId: 1
+};
+let pendingShift = null;
+
+function mk(dateStr, startStr, endStr, earnings, tips, breakMinutes){
+  const start = new Date(dateStr + ' ' + startStr);
+  let end = new Date(dateStr + ' ' + endStr);
+  if(end <= start) end = new Date(end.getTime() + 24*3600*1000);
+  tips = tips || 0;
+  return { job: state.job.name, emoji: state.job.mood, color: state.job.color, start, end, earnings: earnings+tips, wageEarnings: earnings, tips, breakMinutes: breakMinutes||0 };
+}
+
+function endOfMonthISO(){
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+}
+
+// seed demo history (relative to "today") — only used the very first time, before anything is saved
+function seedDemoData(){
+  const today = new Date();
+  const d = (offset)=>{ const x = new Date(today); x.setDate(x.getDate()-offset); return x.toISOString().slice(0,10); };
+  state.history = [
+    mk(d(6), '7:00 AM', '6:56 PM', 210.56, 15.00, 30),
+    mk(d(7), '9:00 AM', '5:00 PM', 152.00, 0, 30),
+    mk(d(4), '4:33 PM', '8:00 PM', 60.71, 5.00, 0),
+    mk(d(2), '5:21 PM', '8:15 PM', 47.97, 7.00, 0),
+    mk(d(2), '8:21 PM', '9:45 PM', 26.35, 0, 0),
+    mk(d(1), '10:11 AM', '6:35 PM', 142.86, 12.00, 30),
+  ];
+  state.goals = [
+    { id: state.nextGoalId++, name: "End of month goal", target: 1000, deadline: endOfMonthISO(), allocationPct: 100, color: '#34c759' }
+  ];
+}
+
+/* ---------------- PERSISTENCE ---------------- */
+const STORAGE_KEY = 'clockin_state_v2';
+
+function saveState(){
+  try{
+    const payload = {
+      wage: state.wage,
+      taxRate: state.taxRate,
+      currency: state.currency,
+      receiveTips: state.receiveTips,
+      job: state.job,
+      goals: state.goals,
+      nextGoalId: state.nextGoalId,
+      metric: state.metric,
+      period: state.period,
+      clockedIn: state.clockedIn,
+      clockInTime: state.clockedIn ? state.clockInTime : null,
+      onBreak: state.onBreak,
+      breakStart: state.onBreak ? state.breakStart : null,
+      breakAccumMs: state.breakAccumMs,
+      settings: state.settings,
+      schedules: state.schedules,
+      nextScheduleId: state.nextScheduleId,
+      history: state.history.map(s=>({
+        job: s.job, emoji: s.emoji, color: s.color,
+        start: s.start.toISOString(), end: s.end.toISOString(),
+        earnings: s.earnings, wageEarnings: s.wageEarnings,
+        tips: s.tips, breakMinutes: s.breakMinutes
+      }))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch(e){ console.error('ClockIn: could not save data', e); }
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    state.wage = typeof data.wage === 'number' ? data.wage : state.wage;
+    state.taxRate = typeof data.taxRate === 'number' ? data.taxRate : state.taxRate;
+    state.currency = data.currency || state.currency;
+    state.receiveTips = data.receiveTips !== undefined ? data.receiveTips : state.receiveTips;
+    if(data.job) state.job = Object.assign({}, state.job, data.job);
+    state.goals = Array.isArray(data.goals) ? data.goals : state.goals;
+    state.nextGoalId = data.nextGoalId || state.nextGoalId;
+    state.metric = data.metric || state.metric;
+    state.period = data.period || state.period;
+    state.clockedIn = !!data.clockedIn;
+    state.clockInTime = data.clockInTime || null;
+    state.onBreak = !!data.onBreak;
+    state.breakStart = data.breakStart || null;
+    state.breakAccumMs = data.breakAccumMs || 0;
+    if(data.settings) state.settings = Object.assign({}, state.settings, data.settings);
+    state.schedules = Array.isArray(data.schedules) ? data.schedules : state.schedules;
+    state.nextScheduleId = data.nextScheduleId || state.nextScheduleId;
+    state.history = Array.isArray(data.history) ? data.history.map(s=>({
+      job: s.job, emoji: s.emoji, color: s.color || '#ff3b30',
+      start: new Date(s.start), end: new Date(s.end),
+      earnings: s.earnings, wageEarnings: s.wageEarnings,
+      tips: s.tips, breakMinutes: s.breakMinutes
+    })) : [];
+    return true;
+  } catch(e){ console.error('ClockIn: could not load saved data', e); return false; }
+}
+
+/* ---------------- NAV ---------------- */
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('on', n.dataset.page===page));
+  if(page==='history') renderHistory();
+  if(page==='insights') renderInsights();
+  if(page==='goals') renderGoals();
+}
+
+/* ---------------- DASHBOARD / LIVE COUNTER ---------------- */
+let tickHandle = null;
+
+function fmtMoney(n){
+  const sym = (CURRENCIES[state.currency] || CURRENCIES.USD).symbol;
+  return sym + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtTime(totalSeconds){
+  const h = Math.floor(totalSeconds/3600);
+  const m = Math.floor((totalSeconds%3600)/60);
+  const s = Math.floor(totalSeconds%60);
+  const p = n=>String(n).padStart(2,'0');
+  return p(h)+':'+p(m)+':'+p(s);
+}
+
+function toggleClock(){
+  if(!state.clockedIn){
+    state.clockedIn = true;
+    state.clockInTime = Date.now();
+    state.onBreak = false;
+    state.breakStart = null;
+    state.breakAccumMs = 0;
+    document.getElementById('dashStatus').textContent = 'Clocked In';
+    const btn = document.getElementById('clockBtn');
+    btn.classList.add('active-state');
+    document.getElementById('clockBtnLabel').textContent = 'Clock Out';
+    document.getElementById('clockIcon').innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+    tickHandle = setInterval(updateLiveCounter, 100);
+    updateBreakButtonVisibility();
+    saveState();
+  } else {
+    // auto-end an in-progress break before closing out the shift
+    if(state.onBreak){
+      state.breakAccumMs += Date.now() - state.breakStart;
+      state.onBreak = false;
+      state.breakStart = null;
+    }
+    const elapsedMs = Date.now() - state.clockInTime;
+    const start = new Date(state.clockInTime);
+    const end = new Date();
+    pendingShift = { start, end, elapsedMs, breakAccumMs: state.breakAccumMs };
+
+    state.clockedIn = false;
+    clearInterval(tickHandle);
+    document.getElementById('dashStatus').textContent = 'Not Clocked In';
+    document.getElementById('dashAmount').textContent = '$0.00';
+    document.getElementById('dashTimer').textContent = '00:00:00';
+    const btn = document.getElementById('clockBtn');
+    btn.classList.remove('active-state');
+    document.getElementById('clockBtnLabel').textContent = 'Clock In';
+    document.getElementById('clockIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+    updateBreakButtonVisibility();
+    saveState();
+
+    openClockOutModal();
+  }
+}
+
+function toggleBreak(){
+  if(!state.clockedIn) return;
+  if(!state.onBreak){
+    state.onBreak = true;
+    state.breakStart = Date.now();
+  } else {
+    state.breakAccumMs += Date.now() - state.breakStart;
+    state.onBreak = false;
+    state.breakStart = null;
+  }
+  updateBreakButtonVisibility();
+  saveState();
+}
+
+function updateBreakButtonVisibility(){
+  const btn = document.getElementById('breakBtn');
+  if(!btn) return;
+  const show = state.clockedIn && state.settings.startBreakTimerEnabled;
+  btn.style.display = show ? 'flex' : 'none';
+  btn.classList.toggle('on-break', state.onBreak);
+  document.getElementById('breakBtnIcon').textContent = state.onBreak ? '⏸️' : '☕';
+  document.getElementById('breakBtnLabel').textContent = state.onBreak ? 'End Break' : 'Start Break';
+}
+
+function openClockOutModal(){
+  const trackedBreakMin = Math.round((pendingShift.breakAccumMs||0)/60000);
+  const defaultBreak = trackedBreakMin > 0 ? trackedBreakMin : state.settings.defaultBreakMinutes;
+  const paidMs = Math.max(0, pendingShift.elapsedMs - (pendingShift.breakAccumMs||0));
+  const grossEarnings = (paidMs/3600000) * state.wage;
+  const sheet = document.getElementById('modalSheet');
+  sheet.innerHTML = `
+    <div class="modal-title">Shift Complete — ${fmtMoney(grossEarnings)}</div>
+    <div class="modal-field">
+      ${state.receiveTips ? `<label>Tips (${(CURRENCIES[state.currency]||CURRENCIES.USD).symbol})</label><input id="mClockTips" type="number" step="0.01" value="0">` : ''}
+      ${state.settings.showBreakOption ? `<label>Break time (minutes)</label><input id="mClockBreak" type="number" step="1" value="${defaultBreak}">` : ''}
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="finalizeShift(true)">Skip</button>
+      <button class="modal-btn save" onclick="finalizeShift(false)">Save Shift</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function finalizeShift(skip){
+  const tipsEl = document.getElementById('mClockTips');
+  const breakEl = document.getElementById('mClockBreak');
+  const tips = skip ? 0 : (tipsEl ? (parseFloat(tipsEl.value) || 0) : 0);
+  const breakMinutes = skip ? 0 : (breakEl ? (parseFloat(breakEl.value) || 0) : 0);
+  const paidMs = Math.max(0, pendingShift.elapsedMs - breakMinutes*60000);
+  const wageEarnings = (paidMs/3600000) * state.wage;
+  state.history.unshift({
+    job: state.job.name, emoji: state.job.mood, color: state.job.color,
+    start: pendingShift.start, end: pendingShift.end,
+    earnings: wageEarnings + tips, wageEarnings, tips, breakMinutes
+  });
+  pendingShift = null;
+  state.breakAccumMs = 0;
+  closeModal();
+  renderHistory();
+  renderGoals();
+  saveState();
+}
+
+function updateLiveCounter(){
+  const now = Date.now();
+  let liveBreakMs = state.breakAccumMs;
+  if(state.onBreak) liveBreakMs += now - state.breakStart;
+  const elapsedMs = now - state.clockInTime;
+  const paidMs = Math.max(0, elapsedMs - liveBreakMs);
+  const earnings = (paidMs/3600000) * state.wage;
+  document.getElementById('dashAmount').textContent = fmtMoney(earnings);
+  document.getElementById('dashTimer').textContent = fmtTime(elapsedMs/1000);
+}
+
+/* ---------------- MODALS ---------------- */
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+
+let jobDraft = null;
+
+function openJobModal(){
+  jobDraft = Object.assign({}, state.job, { wage: state.wage, currency: state.currency });
+  renderJobModal();
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function renderJobModal(){
+  const sheet = document.getElementById('modalSheet');
+  const currencyOptions = Object.keys(CURRENCIES).map(code=>
+    `<option value="${code}" ${jobDraft.currency===code?'selected':''}>${CURRENCIES[code].label}</option>`
+  ).join('');
+  const colorSwatches = COLORS.map(c=>
+    `<div class="swatch ${jobDraft.color===c?'selected':''}" style="background:${c};" onclick="pickJobColor('${c}')"></div>`
+  ).join('');
+  const iconOpts = ICONS.map(ic=>
+    `<div class="icon-opt ${jobDraft.icon===ic?'selected':''}" style="color:${jobDraft.color}; background:${jobDraft.icon===ic?jobDraft.color+'33':'#2c2c2e'};" onclick="pickJobIcon('${ic}')">${ic}</div>`
+  ).join('');
+
+  sheet.innerHTML = `
+    <div class="sheet-topbar">
+      <button class="sheet-link" onclick="closeModal()">Cancel</button>
+      <div style="font-weight:800; font-size:16px;">Edit Job</div>
+      <button class="sheet-link" onclick="saveJob()">Save</button>
+    </div>
+    <div class="section-label">Job</div>
+    <div class="field-group">
+      <div class="field-row"><input type="text" id="mJobName" value="${jobDraft.name}" placeholder="Job name"></div>
+      <div class="field-row"><span class="flabel">Hourly Rate</span><input type="number" step="0.01" id="mJobWage" value="${jobDraft.wage.toFixed(2)}"></div>
+      <div class="field-row"><span class="flabel">Currency</span><select id="mJobCurrency" onchange="jobDraft.currency=this.value; renderJobModal();">${currencyOptions}</select></div>
+    </div>
+
+    <div class="section-label">Color</div>
+    <div class="swatch-row">${colorSwatches}</div>
+
+    <div class="section-label">Icon</div>
+    <div class="icon-grid">${iconOpts}</div>
+
+    <div class="section-label">Overtime</div>
+    <div class="field-group">
+      <div class="field-row">
+        <span class="flabel">Apply overtime multiplier</span>
+        <div class="toggle ${jobDraft.overtime?'on':''}" onclick="jobDraft.overtime=!jobDraft.overtime; renderJobModal();"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
+    <div class="field-note">Reserved for a future per-session calculator; for now this is informational.</div>
+  `;
+}
+function pickJobColor(c){ jobDraft.color = c; renderJobModal(); }
+function pickJobIcon(ic){ jobDraft.icon = ic; renderJobModal(); }
+
+function saveJob(){
+  const name = document.getElementById('mJobName').value.trim();
+  const wageVal = parseFloat(document.getElementById('mJobWage').value);
+  if(name) jobDraft.name = name;
+  if(!isNaN(wageVal) && wageVal > 0) jobDraft.wage = wageVal;
+
+  state.job.name = jobDraft.name;
+  state.job.icon = jobDraft.icon;
+  state.job.color = jobDraft.color;
+  state.job.overtime = jobDraft.overtime;
+  state.wage = jobDraft.wage;
+  state.currency = jobDraft.currency;
+
+  document.getElementById('jobLabel').textContent = state.job.name;
+  document.getElementById('jobIcon').textContent = state.job.icon;
+  document.getElementById('jobEmoji').textContent = state.job.mood;
+  document.getElementById('wageLabel').textContent = fmtMoney(state.wage) + '/hr';
+  applyJobColor();
+  closeModal();
+  saveState();
+  renderHistory();
+  renderGoals();
+}
+
+function applyJobColor(){
+  const pill = document.getElementById('jobPill');
+  if(!pill) return;
+  pill.style.background = state.job.color + '26';
+  pill.style.color = state.job.color;
+}
+
+function openWageModal(){
+  const sheet = document.getElementById('modalSheet');
+  sheet.innerHTML = `
+    <div class="modal-title">Hourly Wage</div>
+    <div class="modal-field">
+      <label>Rate ($/hr)</label>
+      <input id="mWage" type="number" step="0.01" value="${state.wage.toFixed(2)}">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn save" onclick="saveWage()">Save</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function saveWage(){
+  const val = parseFloat(document.getElementById('mWage').value);
+  if(!isNaN(val) && val > 0){
+    state.wage = val;
+    document.getElementById('wageLabel').textContent = fmtMoney(val) + '/hr';
+    saveState();
+  }
+  closeModal();
+}
+function saveWageFromSettings(){
+  const val = parseFloat(document.getElementById('settingsWageInput').value);
+  if(!isNaN(val) && val > 0){
+    state.wage = val;
+    document.getElementById('wageLabel').textContent = fmtMoney(val) + '/hr';
+    document.getElementById('settingsWageInput').value = '';
+    saveState();
+    alert('Wage updated to ' + fmtMoney(val) + '/hr');
+  }
+}
+function saveTaxFromSettings(){
+  const val = parseFloat(document.getElementById('settingsTaxInput').value);
+  if(!isNaN(val) && val >= 0){
+    state.taxRate = val;
+    document.getElementById('currentTaxLabel').textContent = val + '%';
+    document.getElementById('settingsTaxInput').value = '';
+    saveState();
+  }
+}
+
+function openGoalModal(goalId){
+  const goal = goalId ? state.goals.find(g=>g.id===goalId) : null;
+  const sheet = document.getElementById('modalSheet');
+  sheet.innerHTML = `
+    <div class="modal-title">${goal ? 'Edit Goal' : 'New Goal'}</div>
+    <div class="modal-field">
+      <label>Goal name</label>
+      <input id="mGoalName" value="${goal ? goal.name : ''}" placeholder="e.g. New laptop">
+      <label>Target amount ($)</label>
+      <input id="mGoal" type="number" step="1" value="${goal ? goal.target : 1000}">
+      <label>Target date</label>
+      <input id="mGoalDate" type="date" value="${goal ? goal.deadline : endOfMonthISO()}">
+    </div>
+    <div class="modal-btns">
+      ${goal ? `<button class="modal-btn cancel" onclick="deleteGoal(${goal.id})" style="color:#ff453a;">Delete</button>` : `<button class="modal-btn cancel" onclick="closeModal()">Cancel</button>`}
+      <button class="modal-btn save" onclick="saveGoal(${goal ? goal.id : 'null'})">Save</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function saveGoal(goalId){
+  const name = document.getElementById('mGoalName').value.trim() || 'Goal';
+  const val = parseFloat(document.getElementById('mGoal').value);
+  const deadline = document.getElementById('mGoalDate').value || endOfMonthISO();
+  if(!isNaN(val) && val > 0){
+    if(goalId){
+      const goal = state.goals.find(g=>g.id===goalId);
+      if(goal){ goal.name = name; goal.target = val; goal.deadline = deadline; }
+    } else {
+      state.goals.push({ id: state.nextGoalId++, name, target: val, deadline });
+    }
+    renderGoals();
+    saveState();
+  }
+  closeModal();
+}
+function deleteGoal(goalId){
+  state.goals = state.goals.filter(g=>g.id!==goalId);
+  renderGoals();
+  saveState();
+  closeModal();
+}
+
+function addManualShift(){
+  const today = new Date().toISOString().slice(0,10);
+  const sheet = document.getElementById('modalSheet');
+  sheet.innerHTML = `
+    <div class="modal-title">Add Shift</div>
+    <div class="modal-field">
+      <label>Job name</label>
+      <input id="mmJob" value="${state.job.name}">
+      <label>Date</label>
+      <input id="mmDate" type="date" value="${today}">
+      <label>Start time</label>
+      <input id="mmStart" type="time" value="09:00">
+      <label>End time</label>
+      <input id="mmEnd" type="time" value="17:00">
+      ${state.receiveTips ? `<label>Tips ($)</label><input id="mmTips" type="number" step="0.01" value="0">` : ''}
+      ${state.settings.showBreakOption ? `<label>Break time (minutes)</label><input id="mmBreak" type="number" step="1" value="0">` : ''}
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn save" onclick="saveManualShift()">Save</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function saveManualShift(){
+  const job = document.getElementById('mmJob').value.trim() || state.job.name;
+  const dateStr = document.getElementById('mmDate').value;
+  const startStr = document.getElementById('mmStart').value;
+  const endStr = document.getElementById('mmEnd').value;
+  const tipsEl = document.getElementById('mmTips');
+  const breakEl = document.getElementById('mmBreak');
+  const tips = tipsEl ? (parseFloat(tipsEl.value) || 0) : 0;
+  const breakMinutes = breakEl ? (parseFloat(breakEl.value) || 0) : 0;
+  if(!dateStr || !startStr || !endStr) { closeModal(); return; }
+
+  const start = new Date(dateStr + 'T' + startStr);
+  let end = new Date(dateStr + 'T' + endStr);
+  if(end <= start) end = new Date(end.getTime() + 24*3600*1000);
+
+  const paidMs = Math.max(0, (end-start) - breakMinutes*60000);
+  const wageEarnings = (paidMs/3600000) * state.wage;
+
+  state.history.push({
+    job, emoji: state.job.mood, color: state.job.color, start, end,
+    earnings: wageEarnings + tips, wageEarnings, tips, breakMinutes
+  });
+  closeModal();
+  renderHistory();
+  renderGoals();
+  saveState();
+}
+
+/* ---------------- HISTORY ---------------- */
+function dateKey(d){ return d.toISOString().slice(0,10); }
+function dayLabel(d){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yest = new Date(today); yest.setDate(yest.getDate()-1);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  if(dd.getTime()===today.getTime()) return 'TODAY';
+  if(dd.getTime()===yest.getTime()) return dd.toLocaleDateString('en-US',{weekday:'long'}).toUpperCase() + '\\nYESTERDAY';
+  const daysAgo = Math.round((today-dd)/86400000);
+  if(daysAgo < 6) return dd.toLocaleDateString('en-US',{weekday:'long'}).toUpperCase();
+  return dd.toLocaleDateString('en-US',{weekday:'long', day:'numeric', month:'short', year:'numeric'}).toUpperCase();
+}
+function timeRange(start,end){
+  const opts = {hour:'numeric', minute:'2-digit'};
+  const durMin = Math.round((end-start)/60000);
+  const h = Math.floor(durMin/60), m = durMin%60;
+  return start.toLocaleTimeString('en-US',opts) + ' – ' + end.toLocaleTimeString('en-US',opts) + ' · ' + h + 'h ' + m + 'm';
+}
+
+function renderHistory(){
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const list = document.getElementById('historyList');
+  const filtered = state.history.filter(s=> s.job.toLowerCase().includes(q));
+  const sorted = [...filtered].sort((a,b)=>b.start-a.start);
+
+  const allTotal = state.history.reduce((a,s)=>a+s.earnings,0);
+  const allHours = state.history.reduce((a,s)=>a+(s.end-s.start),0)/3600000;
+  document.getElementById('allTimeTotal').textContent = fmtMoney(allTotal);
+  document.getElementById('allTimeShifts').textContent = state.history.length + ' shift' + (state.history.length!==1?'s':'');
+  document.getElementById('allTimeHours').textContent = allHours.toFixed(1) + ' hrs';
+
+  if(sorted.length===0){
+    list.innerHTML = '<div class="empty-note">No shifts found.</div>';
+    return;
+  }
+
+  const groups = {};
+  sorted.forEach(s=>{
+    const key = dateKey(s.start);
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(s);
+  });
+
+  let html = '';
+  Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(key=>{
+    const shifts = groups[key];
+    const dayTotal = shifts.reduce((a,s)=>a+s.earnings,0);
+    html += `<div class="day-group">
+      <div class="day-head"><span>${dayLabel(shifts[0].start).replace('\\n',' ')}</span><span>${fmtMoney(dayTotal)}</span></div>`;
+    shifts.forEach((s, idx)=>{
+      const globalIdx = state.history.indexOf(s);
+      html += `<div class="shift-row" onclick="showShiftDetail(${globalIdx})">
+        <div class="shift-bar"></div>
+        <div class="shift-info">
+          <div class="shift-name">${s.job} ${s.emoji||''}</div>
+          <div class="shift-time">${timeRange(s.start,s.end)}</div>
+        </div>
+        <div class="shift-amount">${fmtMoney(s.earnings)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  list.innerHTML = html;
+}
+
+function showShiftDetail(idx){
+  const s = state.history[idx];
+  if(!s) return;
+  const dateStr = dateKey(s.start);
+  const timeStr = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  const sheet = document.getElementById('modalSheet');
+  sheet.innerHTML = `
+    <div class="modal-title">Edit Shift</div>
+    <div class="modal-field">
+      <label>Job name</label>
+      <input id="esJob" value="${s.job}">
+      <label>Date</label>
+      <input id="esDate" type="date" value="${dateStr}">
+      <label>Start time</label>
+      <input id="esStart" type="time" value="${timeStr(s.start)}">
+      <label>End time</label>
+      <input id="esEnd" type="time" value="${timeStr(s.end)}">
+      <label>Tips ($)</label>
+      <input id="esTips" type="number" step="0.01" value="${(s.tips||0).toFixed(2)}">
+      <label>Break time (minutes)</label>
+      <input id="esBreak" type="number" step="1" value="${s.breakMinutes||0}">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="deleteShift(${idx})" style="color:#ff453a;">Delete</button>
+      <button class="modal-btn save" onclick="saveShiftEdit(${idx})">Save</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function saveShiftEdit(idx){
+  const s = state.history[idx];
+  if(!s) return;
+  const job = document.getElementById('esJob').value.trim() || s.job;
+  const dateStr = document.getElementById('esDate').value;
+  const startStr = document.getElementById('esStart').value;
+  const endStr = document.getElementById('esEnd').value;
+  const tips = parseFloat(document.getElementById('esTips').value) || 0;
+  const breakMinutes = parseFloat(document.getElementById('esBreak').value) || 0;
+  if(!dateStr || !startStr || !endStr){ closeModal(); return; }
+
+  const start = new Date(dateStr + 'T' + startStr);
+  let end = new Date(dateStr + 'T' + endStr);
+  if(end <= start) end = new Date(end.getTime() + 24*3600*1000);
+
+  const paidMs = Math.max(0, (end-start) - breakMinutes*60000);
+  const wageEarnings = (paidMs/3600000) * state.wage;
+
+  s.job = job;
+  s.start = start;
+  s.end = end;
+  s.tips = tips;
+  s.breakMinutes = breakMinutes;
+  s.wageEarnings = wageEarnings;
+  s.earnings = wageEarnings + tips;
+
+  closeModal();
+  renderHistory();
+  renderGoals();
+  saveState();
+}
+
+function deleteShift(idx){
+  state.history.splice(idx, 1);
+  closeModal();
+  renderHistory();
+  renderGoals();
+  saveState();
+}
+
+/* ---------------- INSIGHTS ---------------- */
+function setMetric(m){
+  state.metric = m;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.metric===m));
+  renderInsights();
+}
+function setPeriod(p){
+  state.period = p;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('on', Number(b.dataset.period)===p));
+  renderInsights();
+}
+
+function metricValue(s, metric){
+  if(metric==='wage') return s.wageEarnings != null ? s.wageEarnings : s.earnings;
+  if(metric==='tips') return s.tips || 0;
+  if(metric==='tax') return (s.earnings) * (state.taxRate/100);
+  if(metric==='breaks') return s.breakMinutes || 0;
+  return s.earnings;
+}
+function fmtMetric(v, metric){
+  if(metric==='breaks'){
+    const h = Math.floor(v/60), m = Math.round(v%60);
+    return h>0 ? (h+'h '+m+'m') : (m+'m');
+  }
+  return fmtMoney(v);
+}
+
+function renderInsights(){
+  const metric = state.metric;
+  const days = state.period;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const buckets = [];
+  for(let i=days-1; i>=0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    buckets.push({date:d, total:0});
+  }
+  state.history.forEach(s=>{
+    const sd = new Date(s.start); sd.setHours(0,0,0,0);
+    const b = buckets.find(b=>b.date.getTime()===sd.getTime());
+    if(b) b.total += metricValue(s, metric);
+  });
+
+  const chartCards = document.querySelectorAll('.chart-card');
+  const titles = {
+    wage: ['Earnings', 'Average by weekday', 'Cumulative earnings'],
+    tips: ['Tips', 'Average tips by weekday', 'Cumulative tips'],
+    tax: ['Estimated tax withheld', 'Average tax by weekday', 'Cumulative tax withheld'],
+    breaks: ['Break time', 'Average break by weekday', 'Total break time']
+  };
+  chartCards[0].querySelector('.chart-title').textContent = titles[metric][0];
+  chartCards[1].querySelector('.chart-title').textContent = titles[metric][1];
+  chartCards[2].querySelector('.chart-title').textContent = titles[metric][2];
+
+  const periodTotal = buckets.reduce((a,b)=>a+b.total,0);
+  document.getElementById('periodTotal').textContent = fmtMetric(periodTotal, metric) + ' over ' + days + ' days'
+    + (metric==='tax' ? ' (at ' + state.taxRate + '%)' : '');
+
+  const max = Math.max(1, ...buckets.map(b=>b.total));
+  const showEvery = days > 30 ? Math.ceil(days/15) : 1;
+  document.getElementById('dailyBars').innerHTML = buckets.map((b,i)=>{
+    const h = Math.max(2, (b.total/max)*130);
+    const label = (i%showEvery===0) ? b.date.getDate() : '';
+    return `<div class="bar-col"><div class="bar" style="height:${h}px"></div><div class="bar-label">${label}</div></div>`;
+  }).join('');
+
+  const weekdayTotals = [0,0,0,0,0,0,0];
+  const weekdayCounts = [0,0,0,0,0,0,0];
+  state.history.forEach(s=>{
+    const wd = new Date(s.start).getDay();
+    weekdayTotals[wd]+=metricValue(s, metric); weekdayCounts[wd]+=1;
+  });
+  const weekdayAvg = weekdayTotals.map((t,i)=> weekdayCounts[i] ? t/weekdayCounts[i] : 0);
+  const wmax = Math.max(1, ...weekdayAvg);
+  const wlabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('weekdayBars').innerHTML = weekdayAvg.map((v,i)=>{
+    const h = Math.max(2, (v/wmax)*130);
+    return `<div class="bar-col"><div class="bar" style="height:${h}px"></div><div class="bar-label">${wlabels[i]}</div></div>`;
+  }).join('');
+
+  const cumulative = state.history.reduce((a,s)=>a+metricValue(s, metric),0);
+  document.getElementById('cumulativeTotal').textContent = fmtMetric(cumulative, metric);
+  document.getElementById('cumulativeTotal').className = metric==='breaks' ? '' : 'cumulative';
+  document.getElementById('cumulativeTotal').style.cssText = metric==='breaks' ? 'font-size:22px; font-weight:800; color:var(--text-1);' : '';
+}
+
+/* ---------------- GOALS ---------------- */
+function renderGoals(){
+  const saved = state.history.reduce((a,s)=>a+s.earnings,0);
+  const combinedTarget = state.goals.reduce((a,g)=>a+g.target,0) || 1;
+  const pct = Math.min(100, (saved/combinedTarget)*100);
+
+  document.getElementById('goalSavedTotal').textContent = fmtMoney(saved);
+  document.getElementById('goalTopProgress').style.width = pct + '%';
+  document.getElementById('goalTopPct').textContent = Math.round(pct) + '% of target';
+  document.getElementById('goalTopTarget').textContent = '$' + combinedTarget.toLocaleString() + ' goal';
+
+  const now = new Date();
+  const list = document.getElementById('goalsList');
+  if(state.goals.length===0){
+    list.innerHTML = '<div class="empty-note">No goals yet. Tap + to add one.</div>';
+    return;
+  }
+  list.innerHTML = state.goals.map(goal=>{
+    const gpct = Math.min(100, (saved/goal.target)*100);
+    const deadline = new Date(goal.deadline + 'T23:59:59');
+    const msLeft = Math.max(deadline - now, 86400000);
+    const weeksLeft = Math.max(msLeft/(7*86400000), 0.2);
+    const remaining = Math.max(goal.target - saved, 0);
+    const perWeek = remaining / weeksLeft;
+    const dateLabel = deadline.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'});
+    const note = remaining > 0 ? 'Save ' + fmtMoney(perWeek) + '/wk to hit your goal' : 'Goal reached! 🎉';
+    return `<div class="goal-card" onclick="openGoalModal(${goal.id})">
+      <div class="goal-ring">🎯</div>
+      <div class="goal-body">
+        <div class="goal-top-row">
+          <div class="goal-name">${goal.name}</div>
+          <div class="goal-date">${dateLabel}</div>
+        </div>
+        <div class="goal-nums">
+          <span class="left">${fmtMoney(saved)} of ${fmtMoney(goal.target)}</span>
+          <span class="pct">${Math.round(gpct)}%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill green" style="width:${gpct}%"></div></div>
+        <div class="goal-save-note">${note}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- SETTINGS ---------------- */
+function toggleSetting(key){
+  const body = document.getElementById('body-'+key);
+  document.querySelectorAll('.settings-body').forEach(b=>{ if(b!==body) b.classList.remove('open'); });
+  body.classList.toggle('open');
+}
+function toggleSwitch(id){
+  document.getElementById(id).classList.toggle('on');
+}
+
+/* ---------------- INIT ---------------- */
+function init(){
+  const loaded = loadState();
+  if(!loaded){
+    seedDemoData();
+    saveState();
+  }
+
+  document.getElementById('jobLabel').textContent = state.jobName;
+  document.getElementById('jobEmoji').textContent = state.jobEmoji;
+  document.getElementById('wageLabel').textContent = fmtMoney(state.wage) + '/hr';
+  document.getElementById('currentTaxLabel').textContent = state.taxRate + '%';
+
+  if(state.clockedIn && state.clockInTime){
+    document.getElementById('dashStatus').textContent = 'Clocked In';
+    const btn = document.getElementById('clockBtn');
+    btn.classList.add('active-state');
+    document.getElementById('clockBtnLabel').textContent = 'Clock Out';
+    document.getElementById('clockIcon').innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2"/>';
+    updateLiveCounter();
+    tickHandle = setInterval(updateLiveCounter, 100);
+  }
+
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.metric===state.metric));
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('on', Number(b.dataset.period)===state.period));
+
+  renderHistory();
+}
+init();
+</script>
+</body>
+</html>
